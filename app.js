@@ -1,27 +1,45 @@
 document.addEventListener("DOMContentLoaded", function () {
+    // Elementos do DOM
     const colaboradorForm = document.getElementById('colaboradorForm');
     const etapa2 = document.getElementById('etapa2');
     const form = document.getElementById('reportForm');
-    const reportTableBody = document.getElementById('reportTableBody');
-    const totalsList = document.getElementById('totalsList');
     const exportPdfButton = document.getElementById('exportPdfButton');
-    const exportExcelButton = document.getElementById('exportExcelButton');
-    const numeroLinhaContainer = document.getElementById('numeroLinhaContainer');
-    const tipoLinhaContainer = document.getElementById('tipoLinhaContainer');
-    const valorContainer = document.getElementById('valorContainer');
-    const modalSelect = document.getElementById('modal');
+    const entriesContainer = document.getElementById('entriesContainer');
 
-    let reports = [];
-    let dailyTotals = {};
+    // Paleta de cores
+    const theme = {
+        primary: '#34495e',
+        secondary: '#3498db',
+        background: '#f8f9fa',
+        headerBg: '#2c3e50',
+        text: '#2c3e50',
+        success: '#27ae60',
+        warning: '#f1c40f',
+        danger: '#e74c3c'
+    };
+
+    // Estrutura de dados
     let colaboradorData = {};
+    let weeklyData = {
+        seg: { entries: [], totals: { riocard: 0, jae: 0, outros: 0 } },
+        ter: { entries: [], totals: { riocard: 0, jae: 0, outros: 0 } },
+        qua: { entries: [], totals: { riocard: 0, jae: 0, outros: 0 } },
+        qui: { entries: [], totals: { riocard: 0, jae: 0, outros: 0 } },
+        sex: { entries: [], totals: { riocard: 0, jae: 0, outros: 0 } },
+        sab: { entries: [], totals: { riocard: 0, jae: 0, outros: 0 } }
+    };
 
-    colaboradorForm.addEventListener('submit', function (event) {
+    // Inicialização
+    createDaySections();
+
+    // Event Listeners
+    colaboradorForm.addEventListener('submit', handleColaboradorSubmit);
+    form.addEventListener('submit', handleReportSubmit);
+    exportPdfButton.addEventListener('click', generatePDF);
+
+    function handleColaboradorSubmit(event) {
         event.preventDefault();
-
-        if (!document.getElementById('autorizacao').checked) {
-            alert('Você precisa marcar a caixa de autorização antes de salvar os dados.');
-            return;
-        }
+        if (!validateColaboradorForm()) return;
 
         colaboradorData = {
             nomeCompleto: document.getElementById('nomeCompleto').value.toUpperCase(),
@@ -30,192 +48,266 @@ document.addEventListener("DOMContentLoaded", function () {
             cidade: document.getElementById('cidade').value.toUpperCase(),
             telefone: document.getElementById('telefone').value,
             dataEnvio: document.getElementById('dataEnvio').value,
-            tipoRelatorio: document.getElementById('tipoRelatorio').value.toUpperCase(),
-            equipe: document.getElementById('equipe').value.toUpperCase(),
+            equipe: document.getElementById('equipe').value.toUpperCase()
         };
 
         colaboradorForm.style.display = 'none';
         etapa2.style.display = 'block';
-        handleModalChange();
-    });
+    }
 
-    form.addEventListener('submit', function (event) {
+    function handleReportSubmit(event) {
         event.preventDefault();
+        if (!validateReportForm()) return;
 
         const report = {
-            dataVisita: document.getElementById('dataVisita').value.toUpperCase(),
-            ida: document.getElementById('ida').value.toUpperCase(),
+            dataVisita: document.getElementById('dataVisita').value,
+            partida: document.getElementById('partida').value.toUpperCase(),
             destino: document.getElementById('destino').value.toUpperCase(),
-            bilhetagem: document.getElementById('bilhetagem').value.toUpperCase(),
-            modal: modalSelect.value.toUpperCase(),
-            valor: parseFloat(document.getElementById('valor').value) || 0,
-            numeroLinha: document.getElementById('numeroLinha').value.toUpperCase(),
-            tipoLinha: document.getElementById('tipoLinha').value.toUpperCase()
+            modal: document.getElementById('modal').value.toUpperCase(),
+            tipoLinha: document.getElementById('tipoLinha').value.toUpperCase(),
+            valor: parseFloat(document.getElementById('valor').value.replace(',', '.')) || 0,
+            bilhetagem: document.getElementById('bilhetagem').value
         };
 
-        if (report.modal === 'A PÉ') {
-            report.valor = 0;
-            report.tipoLinha = '';
-        }
-
-        reports.push(report);
-        addReportToTable(report);
-        updateTotals();
-
+        const day = getDayKey(report.dataVisita);
+        weeklyData[day].entries.push(report);
+        updateTotals(day, report.bilhetagem, report.valor);
+        updateDayTable(day);
         form.reset();
-        document.getElementById('dataVisita').value = report.dataVisita;
-        handleModalChange();
-    });
-
-    function addReportToTable(report) {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${report.dataVisita}</td>
-            <td>${report.ida}</td>
-            <td>${report.destino}</td>
-            <td>${report.bilhetagem}</td>
-            <td>${report.modal}</td>
-            <td>${report.numeroLinha || '-'}</td>
-            <td>${report.tipoLinha || '-'}</td>
-            <td>${report.valor.toFixed(2)}</td>
-            <td><button type="button" onclick="removeReport(this)">REMOVER</button></td>
-        `;
-        reportTableBody.appendChild(row);
     }
 
-    function updateTotals() {
-        dailyTotals = {};
-        reports.forEach(report => {
-            dailyTotals[report.dataVisita] = (dailyTotals[report.dataVisita] || 0) + report.valor;
+    function getDayKey(fullDayName) {
+        return fullDayName.toLowerCase().substring(0, 3);
+    }
+
+    function updateTotals(day, type, value) {
+        const totals = weeklyData[day].totals;
+        totals[type] = (totals[type] || 0) + value;
+    }
+
+    function createDaySections() {
+        const days = [
+            { key: 'seg', name: 'SEGUNDA-FEIRA' },
+            { key: 'ter', name: 'TERÇA-FEIRA' },
+            { key: 'qua', name: 'QUARTA-FEIRA' },
+            { key: 'qui', name: 'QUINTA-FEIRA' },
+            { key: 'sex', name: 'SEXTA-FEIRA' },
+            { key: 'sab', name: 'SÁBADO' }
+        ];
+
+        days.forEach(day => {
+            const section = document.createElement('div');
+            section.className = 'day-section';
+            section.innerHTML = `
+                <div class="day-header" style="background: ${theme.headerBg}; color: white;">
+                    <h3>${day.name}</h3>
+                </div>
+                <div class="day-content">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Partida</th>
+                                <th>Destino</th>
+                                <th>Modal</th>
+                                <th>Tipo Linha</th>
+                                <th>Valor</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="${day.key}-entries"></tbody>
+                    </table>
+                    <div class="day-totals">
+                        <div class="total-item" style="border-color: ${theme.success}">
+                            <span>Rio Card</span>
+                            <strong id="${day.key}-riocard">R$ 0.00</strong>
+                        </div>
+                        <div class="total-item" style="border-color: ${theme.warning}">
+                            <span>JAÉ</span>
+                            <strong id="${day.key}-jae">R$ 0.00</strong>
+                        </div>
+                        <div class="total-item" style="border-color: ${theme.danger}">
+                            <span>Outros</span>
+                            <strong id="${day.key}-outros">R$ 0.00</strong>
+                        </div>
+                        <div class="total-day" style="background: ${theme.primary}">
+                            <span>Total Dia</span>
+                            <strong id="${day.key}-total">R$ 0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+            entriesContainer.appendChild(section);
         });
-
-        totalsList.innerHTML = '';
-        for (const [day, total] of Object.entries(dailyTotals)) {
-            const li = document.createElement('li');
-            li.textContent = `${day}: R$ ${total.toFixed(2)}`;
-            totalsList.appendChild(li);
-        }
     }
 
-    function showOtherField() {
-        const bilhetagem = document.getElementById("bilhetagem").value;
-        const otherField = document.getElementById("otherField");
-    
-        if (bilhetagem === "outros") {
-            otherField.style.display = "block";
-        } else {
-            otherField.style.display = "none";
-            document.getElementById("other").value = ""; // Limpa o campo ao esconder
-        }
+    function updateDayTable(dayKey) {
+        const tbody = document.getElementById(`${dayKey}-entries`);
+        const { entries, totals } = weeklyData[dayKey];
+        const totalDay = totals.riocard + totals.jae + totals.outros;
+
+        tbody.innerHTML = entries.map((entry, index) => `
+            <tr style="background: ${getRowBackground(entry.bilhetagem)}">
+                <td>${entry.partida}</td>
+                <td>${entry.destino}</td>
+                <td>${entry.modal}</td>
+                <td>${entry.tipoLinha}</td>
+                <td>R$ ${entry.valor.toFixed(2)}</td>
+                <td>
+                    <button class="remove-btn" onclick="removeEntry('${dayKey}', ${index})">
+                        ✕
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById(`${dayKey}-riocard`).textContent = `R$ ${totals.riocard.toFixed(2)}`;
+        document.getElementById(`${dayKey}-jae`).textContent = `R$ ${totals.jae.toFixed(2)}`;
+        document.getElementById(`${dayKey}-outros`).textContent = `R$ ${totals.outros.toFixed(2)}`;
+        document.getElementById(`${dayKey}-total`).textContent = `R$ ${totalDay.toFixed(2)}`;
     }
 
-    function handleModalChange() {
-        const modal = modalSelect.value.toUpperCase();
-        if (modal === 'ÔNIBUS') {
-            numeroLinhaContainer.classList.remove('hidden');
-            tipoLinhaContainer.classList.remove('hidden');
-            valorContainer.classList.remove('hidden');
-        } else if (modal === 'A PÉ') {
-            numeroLinhaContainer.classList.add('hidden');
-            tipoLinhaContainer.classList.add('hidden');
-            valorContainer.classList.add('hidden');
-            document.getElementById('valor').value = 0;
-        } else {
-            numeroLinhaContainer.classList.add('hidden');
-            tipoLinhaContainer.classList.add('hidden');
-            valorContainer.classList.remove('hidden');
-        }
+    function getRowBackground(bilhetagem) {
+        const backgrounds = {
+            riocard: '#e8f4fc',
+            jae: '#e8f6ec',
+            outros: '#f4f4f4'
+        };
+        return backgrounds[bilhetagem] || theme.background;
     }
 
-    modalSelect.addEventListener('change', handleModalChange);
-
-    // Função para formatar o campo de valor
-    function formatValor(input) {
-        // Remove caracteres não-numéricos
-        let valor = input.value.replace(/[^\d]/g, '');
-
-        // Limita a 4 dígitos
-        valor = valor.substring(0, 4);
-
-        // Adiciona separador decimal
-        if (valor.length > 2) {
-            valor = valor.substring(0, valor.length - 2) + '.' + valor.substring(valor.length - 2);
-        }
-
-        input.value = valor;
-    }
-
-    // Event listener para o campo de valor
-    document.getElementById('valor').addEventListener('input', function () {
-        formatValor(this);
-    });
-
-    exportPdfButton.addEventListener('click', function () {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-
-        doc.setFontSize(16);
-        doc.text("RELATÓRIO DE PASSAGEM", 105, 20, null, null, "center");
-
-        doc.setFontSize(10);
-        Object.entries(colaboradorData).forEach(([key, value], index) => {
-            doc.text(`${key.toUpperCase()}: ${value}`, 14, 30 + index * 10);
-        });
-
-        doc.autoTable({
-            startY: 110,
-            head: [['DATA DA VISITA', 'IDA', 'DESTINO', 'BILHETAGEM', 'MODAL', 'NÚMERO DA LINHA', 'TIPO DE LINHA', 'VALOR']],
-            body: reports.map(report => [
-                report.dataVisita, report.ida, report.destino, report.bilhetagem, 
-                report.modal, report.numeroLinha || '-', report.tipoLinha || '-', 
-                report.valor.toFixed(2)
-            ])
-        });
-
-        let startY = doc.lastAutoTable.finalY + 10;
-        doc.text("TOTAIS POR DIA:", 14, startY);
-        startY += 10;
-        for (const [day, total] of Object.entries(dailyTotals)) {
-            doc.text(`${day}: R$ ${total.toFixed(2)}`, 14, startY);
-            startY += 10;
-        }
-
-        const weeklyTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
-        doc.text(`TOTAL SEMANAL: R$ ${weeklyTotal.toFixed(2)}`, 14, startY + 10);
-
-        doc.save('relatorio_de_passagem.pdf');
-    });
-
-    exportExcelButton.addEventListener('click', function () {
-        const wb = XLSX.utils.book_new();
-
-        const wsEtapa1 = XLSX.utils.aoa_to_sheet(
-            Object.entries(colaboradorData).map(([key, value]) => [key.toUpperCase(), value])
-        );
-        XLSX.utils.book_append_sheet(wb, wsEtapa1, 'Dados Iniciais');
-
-        const wsReports = XLSX.utils.json_to_sheet(reports.map(report => ({
-            'DATA DA VISITA': report.dataVisita,
-            'IDA': report.ida,
-            'DESTINO': report.destino,
-            'BILHETAGEM': report.bilhetagem,
-            'MODAL': report.modal,
-            'NÚMERO DA LINHA': report.numeroLinha || '-',
-            'TIPO DE LINHA': report.tipoLinha || '-',
-            'VALOR': report.valor.toFixed(2)
-        })));
-        XLSX.utils.book_append_sheet(wb, wsReports, 'Relatórios');
-
-        XLSX.writeFile(wb, 'relatorio_de_passagem.xlsx');
-    });
-
-    window.removeReport = function (button) {
-        const row = button.closest('tr');
-        const index = Array.from(reportTableBody.children).indexOf(row);
-        reports.splice(index, 1);
-        row.remove();
-        updateTotals();
+    window.removeEntry = function(dayKey, index) {
+        const entry = weeklyData[dayKey].entries[index];
+        weeklyData[dayKey].entries.splice(index, 1);
+        weeklyData[dayKey].totals[entry.bilhetagem] -= entry.valor;
+        updateDayTable(dayKey);
     };
-    
-    document.getElementById('bilhetagem').addEventListener('change', showOtherField);
+
+    function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4');
+        
+        // Configuração do documento
+        doc.setFont('helvetica');
+        doc.setProperties({ title: 'Relatório Completo de Passagens' });
+
+        // Cabeçalho
+        doc.setFontSize(16);
+        doc.setTextColor(theme.headerBg);
+        doc.text("RELATÓRIO DE PASSAGENS", 105, 15, { align: 'center' });
+
+        // Informações do Promotor
+        doc.setFontSize(10);
+        doc.setTextColor(theme.text);
+        doc.text(`Nome: ${colaboradorData.nomeCompleto}`, 20, 25);
+        doc.text(`Endereço: ${colaboradorData.endereco}`, 20, 30);
+        doc.text(`Bairro: ${colaboradorData.bairro}`, 20, 35);
+        doc.text(`Cidade: ${colaboradorData.cidade}`, 20, 40);
+        doc.text(`Telefone: ${colaboradorData.telefone}`, 20, 45);
+
+        // Conteúdo principal
+        let y = 60;
+        Object.entries(weeklyData).forEach(([dayKey, dayData]) => {
+            if(dayData.entries.length > 0) {
+                createDayPDFSection(doc, dayKey, dayData, 20, y);
+                y = doc.lastAutoTable.finalY + 20;
+            }
+        });
+
+        // Total Geral
+        const totalGeral = Object.values(weeklyData).reduce((acc, day) => 
+            acc + day.totals.riocard + day.totals.jae + day.totals.outros, 0);
+        
+        doc.setFontSize(12);
+        doc.setTextColor(theme.primary);
+        doc.text(`TOTAL GERAL: R$ ${totalGeral.toFixed(2)}`, 105, y + 10, { align: 'center' });
+
+        doc.save('relatorio_completo.pdf');
+    }
+
+    function createDayPDFSection(doc, dayKey, dayData, x, y) {
+        const dayName = {
+            seg: 'SEGUNDA-FEIRA',
+            ter: 'TERÇA-FEIRA',
+            qua: 'QUARTA-FEIRA',
+            qui: 'QUINTA-FEIRA',
+            sex: 'SEXTA-FEIRA',
+            sab: 'SÁBADO'
+        }[dayKey];
+
+        // Cabeçalho da seção
+        doc.setFillColor(theme.headerBg);
+        doc.rect(x, y, 170, 8, 'F');
+        doc.setTextColor(255);
+        doc.setFontSize(12);
+        doc.text(dayName, x + 85, y + 5, { align: 'center' });
+
+        // Tabela de dados
+        doc.autoTable({
+            startY: y + 10,
+            startX: x,
+            head: [['Partida', 'Destino', 'Modal', 'Tipo Linha', 'Valor']],
+            body: dayData.entries.map(entry => [
+                entry.partida,
+                entry.destino,
+                entry.modal,
+                entry.tipoLinha,
+                `R$ ${entry.valor.toFixed(2)}`
+            ]),
+            styles: {
+                fillColor: 255,
+                textColor: theme.text,
+                fontSize: 9
+            },
+            headStyles: {
+                fillColor: theme.headerBg,
+                textColor: 255
+            },
+            bodyStyles: {
+                fillColor: row => 
+                    row.dataIndex % 2 === 0 ? theme.background : 255
+            }
+        });
+
+        // Totais
+        const finalY = doc.lastAutoTable.finalY + 5;
+        doc.setFontSize(10);
+        doc.setTextColor(theme.text);
+        doc.text(`Rio Card: R$ ${dayData.totals.riocard.toFixed(2)}`, x, finalY);
+        doc.text(`JAÉ: R$ ${dayData.totals.jae.toFixed(2)}`, x + 60, finalY);
+        doc.text(`Outros: R$ ${dayData.totals.outros.toFixed(2)}`, x + 120, finalY);
+        
+        doc.setFontStyle('bold');
+        doc.text(`TOTAL ${dayName}: R$ ${(dayData.totals.riocard + dayData.totals.jae + dayData.totals.outros).toFixed(2)}`, 
+            x, finalY + 10);
+    }
+
+    // Validações
+    function validateColaboradorForm() {
+        if (!document.getElementById('autorizacao').checked) {
+            showError('Autorização obrigatória!');
+            return false;
+        }
+        return true;
+    }
+
+    function validateReportForm() {
+        const requiredFields = ['dataVisita', 'partida', 'destino', 'modal'];
+        return requiredFields.every(field => {
+            const element = document.getElementById(field);
+            if (!element.value.trim()) {
+                showError(`Campo obrigatório: ${element.labels[0].textContent}`);
+                element.focus();
+                return false;
+            }
+            return true;
+        });
+    }
+
+    function showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = message;
+        document.body.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 3000);
+    }
 });
