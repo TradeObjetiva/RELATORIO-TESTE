@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Elementos do DOM
     const colaboradorForm = document.getElementById('colaboradorForm');
     const etapa2 = document.getElementById('etapa2');
-    const form = document.getElementById('reportForm');
+    const reportForm = document.getElementById('reportForm');
     const exportPdfButton = document.getElementById('exportPdfButton');
     const entriesContainer = document.getElementById('entriesContainer');
 
@@ -34,13 +34,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Event Listeners
     colaboradorForm.addEventListener('submit', handleColaboradorSubmit);
-    form.addEventListener('submit', handleReportSubmit);
+    reportForm.addEventListener('submit', handleReportSubmit);
     exportPdfButton.addEventListener('click', generatePDF);
 
     function handleColaboradorSubmit(event) {
         event.preventDefault();
         if (!validateColaboradorForm()) return;
 
+        // Coletar dados do formulário
         colaboradorData = {
             nomeCompleto: document.getElementById('nomeCompleto').value.toUpperCase(),
             endereco: document.getElementById('endereco').value.toUpperCase(),
@@ -48,9 +49,11 @@ document.addEventListener("DOMContentLoaded", function () {
             cidade: document.getElementById('cidade').value.toUpperCase(),
             telefone: document.getElementById('telefone').value,
             dataEnvio: document.getElementById('dataEnvio').value,
-            equipe: document.getElementById('equipe').value.toUpperCase()
+            tipoRelatorio: document.getElementById('tipoRelatorio').value.toUpperCase(),
+            equipe: document.getElementById('equipe').value.toUpperCase(),
         };
 
+        // Ocultar Etapa 1 e exibir Etapa 2
         colaboradorForm.style.display = 'none';
         etapa2.style.display = 'block';
     }
@@ -73,7 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
         weeklyData[day].entries.push(report);
         updateTotals(day, report.bilhetagem, report.valor);
         updateDayTable(day);
-        form.reset();
+        reportForm.reset();
     }
 
     function getDayKey(fullDayName) {
@@ -284,7 +287,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Validações
     function validateColaboradorForm() {
         if (!document.getElementById('autorizacao').checked) {
-            showError('Autorização obrigatória!');
+            showError('Você precisa marcar a caixa de autorização antes de salvar os dados.');
             return false;
         }
         return true;
