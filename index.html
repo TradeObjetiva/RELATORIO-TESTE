@@ -178,7 +178,7 @@
         </header>
         <h1>Relatório de Passagem</h1>
 
-        <!-- Formulário do Colaborador (mantido igual) -->
+        <!-- Formulário do Colaborador (Etapa 1) -->
         <form id="colaboradorForm">
             <div>
                 <label for="nomeCompleto">Nome Completo:</label>
@@ -232,16 +232,9 @@
             <button type="submit">AUTORIZAR E SEGUIR PARA A PRÓXIMA ETAPA</button>
         </form>
 
-        <!-- Etapa 2 - Modificada para compatibilidade -->
+        <!-- Etapa 2 - Formulário de Relatórios -->
         <div id="etapa2" style="display: none;">
             <form id="reportForm">
-                <!-- Alterar ida para partida -->
-                <div>
-                    <label for="partida">Partida:</label>
-                    <input type="text" id="partida" required>
-                </div>
-
-                <!-- Atualizar opções do select -->
                 <div>
                     <label for="dataVisita">Data da Visita:</label>
                     <select id="dataVisita" required>
@@ -253,8 +246,14 @@
                         <option value="SÁBADO">Sábado</option>
                     </select>
                 </div>
-
-                <!-- Atualizar valores da bilhetagem -->
+                <div>
+                    <label for="partida">Partida:</label>
+                    <input type="text" id="partida" required>
+                </div>
+                <div>
+                    <label for="destino">Destino:</label>
+                    <input type="text" id="destino" required>
+                </div>
                 <div>
                     <label for="bilhetagem">Bilhetagem:</label>
                     <select id="bilhetagem" required onchange="showOtherField()">
@@ -263,8 +262,10 @@
                         <option value="outros">Outros</option>
                     </select>
                 </div>
-
-                <!-- Modal em maiúsculas -->
+                <div id="otherField" style="display:none;">
+                    <label for="other">Por favor, especifique:</label>
+                    <input type="text" id="other" name="other">
+                </div>
                 <div>
                     <label for="modal">Modal:</label>
                     <select id="modal" required>
@@ -278,20 +279,10 @@
                         <option value="A PÉ">A Pé</option>
                     </select>
                 </div>
-
-                <!-- Restante do formulário mantido -->
-                <div id="otherField" style="display:none;">
-                    <label for="other">Por favor, especifique:</label>
-                    <input type="text" id="other" name="other">
-                </div>
-
-                <!-- Campo Número da Linha -->
                 <div id="numeroLinhaContainer" class="hidden">
                     <label for="numeroLinha">Número da Linha:</label>
                     <input type="text" id="numeroLinha">
                 </div>
-
-                <!-- Campo Tipo de Linha -->
                 <div id="tipoLinhaContainer" class="hidden">
                     <label for="tipoLinha">Tipo de Linha:</label>
                     <select id="tipoLinha">
@@ -299,16 +290,14 @@
                         <option value="intermunicipal">Intermunicipal</option>
                     </select>
                 </div>
-
                 <div id="valorContainer">
                     <label for="valor">Valor:</label>
                     <input type="text" id="valor" oninput="formatValor(this)" inputmode="decimal" />
                 </div>
-
                 <button type="submit">Adicionar Relatório</button>
             </form>
 
-            <!-- Tabela para exibir os relatórios -->
+            <!-- Tabela de Relatórios -->
             <h2>RELATÓRIOS ADICIONADOS</h2>
             <div id="reportTableContainer">
                 <table>
@@ -331,22 +320,24 @@
                 </table>
             </div>
 
-            <!-- Totais por dia -->
+            <!-- Totais por Dia -->
             <h3>Totais por Dia da Semana</h3>
             <ul id="totalsList">
                 <!-- Totais serão exibidos aqui -->
             </ul>
 
-            <!-- Botões de exportação -->
+            <!-- Botões de Exportação -->
             <button id="exportPdfButton">Exportar Relatórios para PDF</button>
             <button id="exportExcelButton">Exportar Relatórios para Excel</button>
         </div>
     </div>
 
-    <!-- Scripts mantidos iguais -->
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
-    <script src="app.js"></script>
+    <script>
+        // JavaScript ajustado (veja abaixo)
+    </script>
 </body>
 </html>
