@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Relatório de Passagem</title>
     <style>
-        /* Mantenha todo o CSS original */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -14,9 +13,9 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 10px;
+            padding: 10px; /* Padding para mobile */
             box-sizing: border-box;
-            overflow-x: hidden;
+            overflow-x: hidden; /* Evita rolagem lateral */
         }
         .container {
             background-color: #fff;
@@ -24,7 +23,7 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 90vw;
+            max-width: 90vw; /* Usa largura da viewport */
             overflow-y: auto;
             box-sizing: border-box;
         }
@@ -135,41 +134,47 @@
             display: none;
         }
         input[type="checkbox"] {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            width: 20px;
+            -webkit-appearance: none; /* Remove o estilo nativo no iOS */
+            -moz-appearance: none; /* Remove o estilo nativo no Firefox */
+            appearance: none; /* Remove o estilo nativo */
+            width: 20px; /* Tamanho do checkbox */
             height: 20px;
-            border: 2px solid #000;
-            border-radius: 4px;
+            border: 2px solid #000; /* Borda personalizada */
+            border-radius: 4px; /* Cantos arredondados */
             display: inline-block;
             position: relative;
             background-color: #fff;
             cursor: pointer;
         }
+
         input[type="checkbox"]:checked {
-            background-color: #000;
+            background-color: #000; /* Fundo preenchido ao marcar */
             border-color: #000;
         }
+
         input[type="checkbox"]:checked::after {
-            content: '✔';
+            content: '✔'; /* Marca de seleção */
             color: #fff;
             font-size: 14px;
             position: absolute;
             top: 1px;
             left: 4px;
         }
+
         input[type="checkbox"]:focus {
             outline: none;
             box-shadow: 0 0 3px 2px rgba(0, 0, 0, 0.2);
         }
+
         #reportTableContainer {
-            max-height: 300px;
+            max-height: 300px; /* Ajuste a altura conforme necessário */
             overflow-y: auto;
             overflow-x: auto;
             border: 1px solid #ddd;
         }
+
     </style>
+
 </head>
 <body>
     <div class="container">
@@ -178,7 +183,7 @@
         </header>
         <h1>Relatório de Passagem</h1>
 
-        <!-- Formulário do Colaborador (Etapa 1) -->
+        <!-- Formulário para adicionar nome do colaborador e dados adicionais -->
         <form id="colaboradorForm">
             <div>
                 <label for="nomeCompleto">Nome Completo:</label>
@@ -198,7 +203,7 @@
             </div>
             <div>
                 <label for="telefone">Telefone:</label>
-                <input type="number" id="telefone" inputmode="numeric" required>
+                 <input type="number" id="telefone" inputmode="numeric" required>
             </div>
             <div>
                 <label for="dataEnvio">Data de Envio:</label>
@@ -232,33 +237,38 @@
             <button type="submit">AUTORIZAR E SEGUIR PARA A PRÓXIMA ETAPA</button>
         </form>
 
-        <!-- Etapa 2 - Formulário de Relatórios -->
+        <!-- Container da segunda etapa -->
         <div id="etapa2" style="display: none;">
+            <!-- Formulário para adicionar dados -->
             <form id="reportForm">
                 <div>
                     <label for="dataVisita">Data da Visita:</label>
                     <select id="dataVisita" required>
-                        <option value="SEGUNDA-FEIRA">Segunda-feira</option>
-                        <option value="TERÇA-FEIRA">Terça-feira</option>
-                        <option value="QUARTA-FEIRA">Quarta-feira</option>
-                        <option value="QUINTA-FEIRA">Quinta-feira</option>
-                        <option value="SEXTA-FEIRA">Sexta-feira</option>
-                        <option value="SÁBADO">Sábado</option>
+                        <option value="segunda-feira">Segunda-feira</option>
+                        <option value="terça-feira">Terça-feira</option>
+                        <option value="quarta-feira">Quarta-feira</option>
+                        <option value="quinta-feira">Quinta-feira</option>
+                        <option value="sexta-feira">Sexta-feira</option>
+                        <option value="sábado">Sábado</option>
                     </select>
                 </div>
+
                 <div>
-                    <label for="partida">Partida:</label>
-                    <input type="text" id="partida" required>
+                    <label for="ida">Ida:</label>
+                    <input type="text" id="ida" required>
                 </div>
+
                 <div>
                     <label for="destino">Destino:</label>
                     <input type="text" id="destino" required>
                 </div>
+
+                
                 <div>
                     <label for="bilhetagem">Bilhetagem:</label>
-                    <select id="bilhetagem" required onchange="showOtherField()">
-                        <option value="riocard">Rio Card</option>
-                        <option value="jae">Jaé</option>
+                    <select id="bilhetagem" required onchange="Outros()">
+                        <option value="rio card">Rio Card</option>
+                        <option value="jaé">Jaé</option>
                         <option value="outros">Outros</option>
                     </select>
                 </div>
@@ -266,23 +276,29 @@
                     <label for="other">Por favor, especifique:</label>
                     <input type="text" id="other" name="other">
                 </div>
+                
+            
                 <div>
                     <label for="modal">Modal:</label>
                     <select id="modal" required>
-                        <option value="ÔNIBUS">Ônibus</option>
-                        <option value="METRÔ">Metrô</option>
-                        <option value="TREM">Trem</option>
-                        <option value="VAN">Van</option>
-                        <option value="BARCAS">Barcas</option>
+                        <option value="ônibus">Ônibus</option>
+                        <option value="metrô">Metrô</option>
+                        <option value="trem">Trem</option>
+                        <option value="van">Van</option>
+                        <option value="barcas">Barcas</option>
                         <option value="BRT">BRT</option>
                         <option value="VLT">VLT</option>
-                        <option value="A PÉ">A Pé</option>
+                        <option value="a pé">A Pé</option>
                     </select>
                 </div>
+
+                <!-- Campo Número da Linha -->
                 <div id="numeroLinhaContainer" class="hidden">
                     <label for="numeroLinha">Número da Linha:</label>
                     <input type="text" id="numeroLinha">
                 </div>
+
+                <!-- Campo Tipo de Linha -->
                 <div id="tipoLinhaContainer" class="hidden">
                     <label for="tipoLinha">Tipo de Linha:</label>
                     <select id="tipoLinha">
@@ -290,54 +306,51 @@
                         <option value="intermunicipal">Intermunicipal</option>
                     </select>
                 </div>
+
                 <div id="valorContainer">
                     <label for="valor">Valor:</label>
                     <input type="text" id="valor" oninput="formatValor(this)" inputmode="decimal" />
+
                 </div>
+
                 <button type="submit">Adicionar Relatório</button>
             </form>
 
-            <!-- Tabela de Relatórios -->
+            <!-- Tabela para exibir os relatórios -->
             <h2>RELATÓRIOS ADICIONADOS</h2>
-            <div id="reportTableContainer">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>DATA DA VISITA</th>
-                            <th>PARTIDA</th>
-                            <th>DESTINO</th>
-                            <th>BILHETAGEM</th>
-                            <th>MODAL</th>
-                            <th>NÚMERO DA LINHA</th>
-                            <th>TIPO DE LINHA</th>
-                            <th>VALOR</th>
-                            <th>AÇÕES</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reportTableBody">
-                        <!-- Relatórios serão adicionados aqui -->
-                    </tbody>
-                </table>
-            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>DATA DA VISITA</th>
+                        <th>IDA</th>
+                        <th>DESTINO</th>
+                        <th>BILHETAGEM</th>
+                        <th>MODAL</th>
+                        <th>NÚMERO DA LINHA</th>
+                        <th>TIPO DE LINHA</th>
+                        <th>VALOR</th>
+                        <th>AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                    <!-- Relatórios serão adicionados aqui -->
+                </tbody>
+            </table>
 
-            <!-- Totais por Dia -->
             <h3>Totais por Dia da Semana</h3>
             <ul id="totalsList">
                 <!-- Totais serão exibidos aqui -->
             </ul>
 
-            <!-- Botões de Exportação -->
+                        <!-- Botões para exportar os relatórios -->
             <button id="exportPdfButton">Exportar Relatórios para PDF</button>
             <button id="exportExcelButton">Exportar Relatórios para Excel</button>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
-    <script>
-        // JavaScript ajustado (veja abaixo)
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
