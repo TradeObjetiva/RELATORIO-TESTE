@@ -5,8 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const reportForm = document.getElementById('reportForm');
     const reportTableBody = document.getElementById('reportTableBody');
     const totalsList = document.getElementById('totalsList');
-    const exportPdfButton = document.getElementById('exportPdfButton');
-    const exportExcelButton = document.getElementById('exportExcelButton');
+    const exportReportsButton = document.getElementById('exportReportsButton'); // Botão unificado
     const numeroLinhaContainer = document.getElementById('numeroLinhaContainer');
     const tipoLinhaContainer = document.getElementById('tipoLinhaContainer');
     const valorContainer = document.getElementById('valorContainer');
@@ -24,8 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
     reportForm.addEventListener('submit', handleReportSubmit);
     modalSelect.addEventListener('change', handleModalChange);
     bilhetagemSelect.addEventListener('change', showOtherField);
-    exportPdfButton.addEventListener('click', exportToPDF);
-    exportExcelButton.addEventListener('click', exportToExcel);
+    exportReportsButton.addEventListener('click', handleExport); // Listener para o botão unificado
     document.getElementById('valor').addEventListener('input', function () {
         formatValor(this);
     });
@@ -82,6 +80,45 @@ document.addEventListener("DOMContentLoaded", function () {
         reportForm.reset();
         document.getElementById('dataVisita').value = report.dataVisita;
         handleModalChange();
+    }
+
+    // Função de exportação unificada
+    async function handleExport() {
+        const button = exportReportsButton;
+        const originalText = button.textContent;
+        
+        try {
+            // Verifica se há dados para exportar
+            if (!colaboradorData.nomeCompleto || reports.length === 0) {
+                alert('Preencha os dados do colaborador e adicione pelo menos um relatório antes de exportar.');
+                return;
+            }
+
+            // Feedback visual
+            button.textContent = 'Exportando...';
+            button.disabled = true;
+            
+            // Inicia ambas as exportações simultaneamente
+            await Promise.all([
+                exportToPDF().catch(e => console.error('Erro ao exportar PDF:', e)),
+                exportToExcel().catch(e => console.error('Erro ao exportar Excel:', e))
+            ]);
+            
+            // Feedback de sucesso
+            button.textContent = 'Exportação concluída!';
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Erro na exportação:', error);
+            button.textContent = 'Erro na exportação';
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 2000);
+        }
     }
 
     // Funções auxiliares
@@ -160,173 +197,172 @@ document.addEventListener("DOMContentLoaded", function () {
         return `${day}/${month}/${year}`;
     }
 
-    // Funções de exportação
+    // Funções de exportação (convertidas para retornar Promises)
     function exportToPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        return new Promise((resolve) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
 
-        // Cabeçalho e dados do colaborador
-        doc.setFontSize(16);
-        doc.text("RELATÓRIO DE PASSAGEM", 105, 20, { align: 'center' });
-
-        doc.setFontSize(10);
-        let yPosition = 30;
-        
-        const colaboradorFields = [
-            `NOME: ${colaboradorData.nomeCompleto}`,
-            `ENDEREÇO: ${colaboradorData.endereco}`,
-            `BAIRRO: ${colaboradorData.bairro}`,
-            `CIDADE: ${colaboradorData.cidade}`,
-            `TELEFONE: ${colaboradorData.telefone}`,
-            `DATA DE ENVIO: ${formatDate(colaboradorData.dataEnvio)}`,
-            `TIPO DE RELATÓRIO: ${colaboradorData.tipoRelatorio}`,
-            `EQUIPE: ${colaboradorData.equipe}`
-        ];
-
-        colaboradorFields.forEach(field => {
-            doc.text(field, 14, yPosition);
-            yPosition += 10;
-        });
-
-        yPosition += 10;
-
-        // Termo de Autorização
-        doc.setFontSize(12);
-        doc.text("TERMO DE AUTORIZAÇÃO", 105, yPosition, { align: 'center' });
-        yPosition += 10;
-
-        doc.setFontSize(10);
-        const autorizacaoText = [
-            `Eu, ${colaboradorData.nomeCompleto}, residente no endereço ${colaboradorData.endereco}, `,
-            `${colaboradorData.bairro}, ${colaboradorData.cidade}, autorizo a inclusão e a integração dos `,
-            "benefícios tarifários como o Bilhete Único Intermunicipal (BUI), Bilhete Único Carioca (BUC) ou ",
-            "quaisquer outros benefícios tarifários para fins de utilização no transporte público. Declaro, ainda, ",
-            "que esses benefícios serão devidamente registrados no relatório de vale-transporte."
-        ];
-        
-        doc.text(autorizacaoText, 15, yPosition, { maxWidth: 180, align: 'justify' });
-        
-        yPosition += 30;
-        doc.text(`Data: ${formatDate(colaboradorData.dataEnvio)}`, 15, yPosition);
-        yPosition += 15;
-        doc.text("_________________________________________", 105, yPosition, { align: 'center' });
-        yPosition += 10;
-        doc.text("Assinatura do Colaborador", 105, yPosition, { align: 'center' });
-
-        // Tabela de relatórios (se houver)
-        if (reports.length > 0) {
-            doc.addPage();
+            // Cabeçalho e dados do colaborador
             doc.setFontSize(16);
-            doc.text("RELATÓRIOS DE PASSAGEM", 105, 20, { align: 'center' });
+            doc.text("RELATÓRIO DE PASSAGEM", 105, 20, { align: 'center' });
 
-            doc.autoTable({
-                startY: 30,
-                head: [['DATA DA VISITA', 'IDA', 'DESTINO', 'BILHETAGEM', 'MODAL', 'NÚMERO DA LINHA', 'TIPO DE LINHA', 'VALOR']],
-                body: reports.map(report => [
-                    report.dataVisita, 
-                    report.ida, 
-                    report.destino, 
-                    report.bilhetagem, 
-                    report.modal, 
-                    report.numeroLinha || '-', 
-                    report.tipoLinha || '-', 
-                    'R$ ' + report.valor.toFixed(2)
-                ]),
-                margin: { horizontal: 15 },
-                styles: { fontSize: 8, cellPadding: 3 },
-                headerStyles: { fillColor: [0, 0, 0], textColor: 255 }
+            doc.setFontSize(10);
+            let yPosition = 30;
+            
+            const colaboradorFields = [
+                `NOME: ${colaboradorData.nomeCompleto}`,
+                `ENDEREÇO: ${colaboradorData.endereco}`,
+                `BAIRRO: ${colaboradorData.bairro}`,
+                `CIDADE: ${colaboradorData.cidade}`,
+                `TELEFONE: ${colaboradorData.telefone}`,
+                `DATA DE ENVIO: ${formatDate(colaboradorData.dataEnvio)}`,
+                `TIPO DE RELATÓRIO: ${colaboradorData.tipoRelatorio}`,
+                `EQUIPE: ${colaboradorData.equipe}`
+            ];
+
+            colaboradorFields.forEach(field => {
+                doc.text(field, 14, yPosition);
+                yPosition += 10;
             });
 
-            // Totais
-            let startY = doc.lastAutoTable.finalY + 10;
+            yPosition += 10;
+
+            // Termo de Autorização
             doc.setFontSize(12);
-            doc.text("TOTAIS POR DIA:", 14, startY);
-            startY += 10;
+            doc.text("TERMO DE AUTORIZAÇÃO", 105, yPosition, { align: 'center' });
+            yPosition += 10;
+
+            doc.setFontSize(10);
+            const autorizacaoText = [
+                `Eu, ${colaboradorData.nomeCompleto}, residente no endereço ${colaboradorData.endereco}, `,
+                `${colaboradorData.bairro}, ${colaboradorData.cidade}, autorizo a inclusão e a integração dos `,
+                "benefícios tarifários como o Bilhete Único Intermunicipal (BUI), Bilhete Único Carioca (BUC) ou ",
+                "quaisquer outros benefícios tarifários para fins de utilização no transporte público. Declaro, ainda, ",
+                "que esses benefícios serão devidamente registrados no relatório de vale-transporte."
+            ];
             
-            for (const [day, total] of Object.entries(dailyTotals)) {
-                doc.text(`${day}: R$ ${total.toFixed(2)}`, 14, startY);
+            doc.text(autorizacaoText, 15, yPosition, { maxWidth: 180, align: 'justify' });
+            
+            // Tabela de relatórios (se houver)
+            if (reports.length > 0) {
+                doc.addPage();
+                doc.setFontSize(16);
+                doc.text("RELATÓRIOS DE PASSAGEM", 105, 20, { align: 'center' });
+
+                doc.autoTable({
+                    startY: 30,
+                    head: [['DATA DA VISITA', 'IDA', 'DESTINO', 'BILHETAGEM', 'MODAL', 'NÚMERO DA LINHA', 'TIPO DE LINHA', 'VALOR']],
+                    body: reports.map(report => [
+                        report.dataVisita, 
+                        report.ida, 
+                        report.destino, 
+                        report.bilhetagem, 
+                        report.modal, 
+                        report.numeroLinha || '-', 
+                        report.tipoLinha || '-', 
+                        'R$ ' + report.valor.toFixed(2)
+                    ]),
+                    margin: { horizontal: 15 },
+                    styles: { fontSize: 5, cellPadding: 3 },
+                    headerStyles: { fillColor: [0, 0, 0], textColor: 255 }
+                });
+
+                // Totais
+                let startY = doc.lastAutoTable.finalY + 10;
+                doc.setFontSize(12);
+                doc.text("TOTAIS POR DIA:", 14, startY);
                 startY += 10;
+                
+                for (const [day, total] of Object.entries(dailyTotals)) {
+                    doc.text(`${day}: R$ ${total.toFixed(2)}`, 14, startY);
+                    startY += 10;
+                }
+
+                const weeklyTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
+                doc.text(`TOTAL SEMANAL: R$ ${weeklyTotal.toFixed(2)}`, 14, startY + 10);
             }
 
-            const weeklyTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
-            doc.text(`TOTAL SEMANAL: R$ ${weeklyTotal.toFixed(2)}`, 14, startY + 10);
-        }
-
-        doc.save(`Relatorio_Passagem_${colaboradorData.nomeCompleto}.pdf`);
+            doc.save(`Relatorio_Passagem_${colaboradorData.nomeCompleto}.pdf`);
+            resolve();
+        });
     }
 
     function exportToExcel() {
-        const wb = XLSX.utils.book_new();
+        return new Promise((resolve) => {
+            const wb = XLSX.utils.book_new();
 
-        // Planilha 1: Dados do Colaborador e Termo de Autorização
-        const colaboradorSheetData = [
-            ["RELATÓRIO DE PASSAGEM"],
-            [""],
-            ["DADOS DO COLABORADOR"],
-            ["Nome Completo:", colaboradorData.nomeCompleto],
-            ["Endereço:", colaboradorData.endereco],
-            ["Bairro:", colaboradorData.bairro],
-            ["Cidade:", colaboradorData.cidade],
-            ["Telefone:", colaboradorData.telefone],
-            ["Data de Envio:", formatDate(colaboradorData.dataEnvio)],
-            ["Tipo de Relatório:", colaboradorData.tipoRelatorio],
-            ["Equipe:", colaboradorData.equipe],
-            [""],
-            ["TERMO DE AUTORIZAÇÃO"],
-            [""],
-            ["Eu, " + colaboradorData.nomeCompleto + ", residente no endereço " + colaboradorData.endereco + ", " + 
-             colaboradorData.bairro + ", " + colaboradorData.cidade + ", autorizo a inclusão e a integração dos " +
-             "benefícios tarifários como o Bilhete Único Intermunicipal (BUI), Bilhete Único Carioca (BUC) ou " +
-             "quaisquer outros benefícios tarifários para fins de utilização no transporte público. Declaro, ainda, " +
-             "que esses benefícios serão devidamente registrados no relatório de vale-transporte."],
-            [""],
-            ["Assinatura do Colaborador: _________________________________________"]
-        ];
+            // Planilha 1: Dados do Colaborador e Termo de Autorização
+            const colaboradorSheetData = [
+                ["RELATÓRIO DE PASSAGEM"],
+                [""],
+                ["DADOS DO COLABORADOR"],
+                ["Nome Completo:", colaboradorData.nomeCompleto],
+                ["Endereço:", colaboradorData.endereco],
+                ["Bairro:", colaboradorData.bairro],
+                ["Cidade:", colaboradorData.cidade],
+                ["Telefone:", colaboradorData.telefone],
+                ["Data de Envio:", formatDate(colaboradorData.dataEnvio)],
+                ["Tipo de Relatório:", colaboradorData.tipoRelatorio],
+                ["Equipe:", colaboradorData.equipe],
+                [""],
+                ["TERMO DE AUTORIZAÇÃO"],
+                [""],
+                ["Eu, " + colaboradorData.nomeCompleto + ", residente no endereço " + colaboradorData.endereco + ", " + 
+                 colaboradorData.bairro + ", " + colaboradorData.cidade + ", autorizo a inclusão e a integração dos " +
+                 "benefícios tarifários como o Bilhete Único Intermunicipal (BUI), Bilhete Único Carioca (BUC) ou " +
+                 "quaisquer outros benefícios tarifários para fins de utilização no transporte público. Declaro, ainda, " +
+                 "que esses benefícios serão devidamente registrados no relatório de vale-transporte."],
+                [""],
+                ["Assinatura do Colaborador: _________________________________________"]
+            ];
 
-        const wsColaborador = XLSX.utils.aoa_to_sheet(colaboradorSheetData);
-        
-        wsColaborador['!cols'] = [
-            { wch: 30 },
-            { wch: 60 }
-        ];
-        
-        wsColaborador['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
-            { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } },
-            { s: { r: 12, c: 0 }, e: { r: 12, c: 1 } },
-            { s: { r: 14, c: 0 }, e: { r: 14, c: 1 } },
-            { s: { r: 16, c: 0 }, e: { r: 16, c: 1 } },
-            { s: { r: 18, c: 0 }, e: { r: 18, c: 1 } }
-        ];
-        
-        XLSX.utils.book_append_sheet(wb, wsColaborador, 'Dados e Autorização');
+            const wsColaborador = XLSX.utils.aoa_to_sheet(colaboradorSheetData);
+            
+            wsColaborador['!cols'] = [
+                { wch: 30 },
+                { wch: 60 }
+            ];
+            
+            wsColaborador['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } },
+                { s: { r: 12, c: 0 }, e: { r: 12, c: 1 } },
+                { s: { r: 14, c: 0 }, e: { r: 14, c: 1 } },
+                { s: { r: 16, c: 0 }, e: { r: 16, c: 1 } },
+                { s: { r: 18, c: 0 }, e: { r: 18, c: 1 } }
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, wsColaborador, 'Dados e Autorização');
 
-        // Planilha 2: Relatórios de Passagem
-        const wsReports = XLSX.utils.json_to_sheet(reports.map(report => ({
-            'DATA DA VISITA': report.dataVisita,
-            'IDA': report.ida,
-            'DESTINO': report.destino,
-            'BILHETAGEM': report.bilhetagem,
-            'MODAL': report.modal,
-            'NÚMERO DA LINHA': report.numeroLinha || '-',
-            'TIPO DE LINHA': report.tipoLinha || '-',
-            'VALOR': 'R$ ' + report.valor.toFixed(2)
-        })));
-        XLSX.utils.book_append_sheet(wb, wsReports, 'Relatórios');
+            // Planilha 2: Relatórios de Passagem
+            const wsReports = XLSX.utils.json_to_sheet(reports.map(report => ({
+                'DATA DA VISITA': report.dataVisita,
+                'IDA': report.ida,
+                'DESTINO': report.destino,
+                'BILHETAGEM': report.bilhetagem,
+                'MODAL': report.modal,
+                'NÚMERO DA LINHA': report.numeroLinha || '-',
+                'TIPO DE LINHA': report.tipoLinha || '-',
+                'VALOR': 'R$ ' + report.valor.toFixed(2)
+            })));
+            XLSX.utils.book_append_sheet(wb, wsReports, 'Relatórios');
 
-        // Planilha 3: Totais
-        const totalsData = [
-            ['DIA', 'TOTAL'],
-            ...Object.entries(dailyTotals).map(([day, total]) => [day, 'R$ ' + total.toFixed(2)])
-        ];
-        
-        const weeklyTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
-        totalsData.push(['TOTAL SEMANAL', 'R$ ' + weeklyTotal.toFixed(2)]);
-        
-        const wsTotals = XLSX.utils.aoa_to_sheet(totalsData);
-        XLSX.utils.book_append_sheet(wb, wsTotals, 'Totais');
+            // Planilha 3: Totais
+            const totalsData = [
+                ['DIA', 'TOTAL'],
+                ...Object.entries(dailyTotals).map(([day, total]) => [day, 'R$ ' + total.toFixed(2)])
+            ];
+            
+            const weeklyTotal = Object.values(dailyTotals).reduce((sum, total) => sum + total, 0);
+            totalsData.push(['TOTAL SEMANAL', 'R$ ' + weeklyTotal.toFixed(2)]);
+            
+            const wsTotals = XLSX.utils.aoa_to_sheet(totalsData);
+            XLSX.utils.book_append_sheet(wb, wsTotals, 'Totais');
 
-        XLSX.writeFile(wb, `Relatorio_Passagem_${colaboradorData.nomeCompleto}.xlsx`);
+            XLSX.writeFile(wb, `Relatorio_Passagem_${colaboradorData.nomeCompleto}.xlsx`);
+            resolve();
+        });
     }
 
     // Função global para remover relatórios
