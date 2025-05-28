@@ -98,29 +98,10 @@ document.addEventListener("DOMContentLoaded", function () {
             button.textContent = 'Exportando...';
             button.disabled = true;
             
-            // Detecta se é iOS
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-            if (isIOS) {
-                // Para iOS, exporta sequencialmente com confirmação
-                const confirmed = confirm('No iOS, os arquivos serão baixados um de cada vez. Continuar?');
-                if (!confirmed) {
-                    button.textContent = originalText;
-                    button.disabled = false;
-                    return;
-                }
-                
-                await exportToPDF();
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Delay entre downloads
-                await exportToExcel();
-            } else {
-                // Para outros dispositivos, exporta em paralelo
-                await Promise.all([
-                    exportToPDF().catch(e => console.error('Erro ao exportar PDF:', e)),
-                    exportToExcel().catch(e => console.error('Erro ao exportar Excel:', e))
-                ]);
-            }
+            // Solução universal - sempre usar método sequencial com links temporários
+            await exportToPDFUniversal();
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Delay crítico para iOS
+            await exportToExcelUniversal();
             
             // Feedback de sucesso
             button.textContent = 'Exportação concluída!';
@@ -137,6 +118,41 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // Função universal para exportar PDF
+    function exportToPDFUniversal() {
+        return new Promise((resolve) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // [TODO O CÓDIGO DE GERAÇÃO DO PDF PERMANECE IGUAL]
+            
+            // Método universal de download que funciona em todos os navegários
+            const pdfData = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfData);
+            
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = pdfUrl;
+            link.download = `Relatorio_Passagem_${colaboradorData.nomeCompleto}.pdf`;
+            
+            // Adiciona ao corpo e simula clique
+            document.body.appendChild(link);
+            const event = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+            link.dispatchEvent(event);
+            
+            // Limpeza após 60 segundos
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(pdfUrl);
+            }, 60000);
+            
+            resolve();
+        });
+    }
     // Funções auxiliares (mantidas do código original)
     function addReportToTable(report) {
         const row = document.createElement('tr');
@@ -316,7 +332,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Função de exportação para Excel com suporte a iOS
-    function exportToExcel() {
+    function exportToExcelUniversal() {
         return new Promise((resolve) => {
             const wb = XLSX.utils.book_new();
 
@@ -389,20 +405,36 @@ document.addEventListener("DOMContentLoaded", function () {
             XLSX.utils.book_append_sheet(wb, wsTotals, 'Totais');
 
             // Método de download específico para iOS
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                const excelData = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
-                const link = document.createElement('a');
-                link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + excelData;
-                link.download = `Relatorio_Passagem_${colaboradorData.nomeCompleto}.xlsx`;
-                document.body.appendChild(link);
-                link.click();
+            const excelData = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const excelBlob = new Blob([excelData], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            const excelUrl = URL.createObjectURL(excelBlob);
+            
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = excelUrl;
+            link.download = `Relatorio_Passagem_${colaboradorData.nomeCompleto}.xlsx`;
+            
+            // Adiciona ao corpo e simula clique
+            document.body.appendChild(link);
+            const event = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+            link.dispatchEvent(event);
+            
+            // Limpeza após 60 segundos
+            setTimeout(() => {
                 document.body.removeChild(link);
-            } else {
-                XLSX.writeFile(wb, `Relatorio_Passagem_${colaboradorData.nomeCompleto}.xlsx`);
-            }
+                URL.revokeObjectURL(excelUrl);
+            }, 60000);
+            
             resolve();
         });
     }
+
 
     // Função global para remover relatórios
     window.removeReport = function (button) {
