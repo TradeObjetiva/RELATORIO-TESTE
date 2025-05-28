@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const reportForm = document.getElementById('reportForm');
     const reportTableBody = document.getElementById('reportTableBody');
     const totalsList = document.getElementById('totalsList');
-    const exportReportsButton = document.getElementById('exportReportsButton'); // Botão unificado
+    const exportReportsButton = document.getElementById('exportReportsButton');
     const numeroLinhaContainer = document.getElementById('numeroLinhaContainer');
     const tipoLinhaContainer = document.getElementById('tipoLinhaContainer');
     const valorContainer = document.getElementById('valorContainer');
@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
     reportForm.addEventListener('submit', handleReportSubmit);
     modalSelect.addEventListener('change', handleModalChange);
     bilhetagemSelect.addEventListener('change', showOtherField);
-    exportReportsButton.addEventListener('click', handleExport); // Listener para o botão unificado
+    exportReportsButton.addEventListener('click', handleExport);
     document.getElementById('valor').addEventListener('input', function () {
         formatValor(this);
     });
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function () {
         handleModalChange();
     }
 
-    // Função de exportação unificada
+    // Função de exportação unificada com suporte a iOS
     async function handleExport() {
         const button = exportReportsButton;
         const originalText = button.textContent;
@@ -98,22 +98,38 @@ document.addEventListener("DOMContentLoaded", function () {
             button.textContent = 'Exportando...';
             button.disabled = true;
             
-            // Inicia ambas as exportações simultaneamente
-            await Promise.all([
-                exportToPDF().catch(e => console.error('Erro ao exportar PDF:', e)),
-                exportToExcel().catch(e => console.error('Erro ao exportar Excel:', e))
-            ]);
+            // Detecta se é iOS
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+            if (isIOS) {
+                // Para iOS, exporta sequencialmente com confirmação
+                const confirmed = confirm('No iOS, os arquivos serão baixados um de cada vez. Continuar?');
+                if (!confirmed) {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                    return;
+                }
+                
+                await exportToPDF();
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Delay entre downloads
+                await exportToExcel();
+            } else {
+                // Para outros dispositivos, exporta em paralelo
+                await Promise.all([
+                    exportToPDF().catch(e => console.error('Erro ao exportar PDF:', e)),
+                    exportToExcel().catch(e => console.error('Erro ao exportar Excel:', e))
+                ]);
+            }
             
             // Feedback de sucesso
             button.textContent = 'Exportação concluída!';
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.disabled = false;
-            }, 2000);
             
         } catch (error) {
             console.error('Erro na exportação:', error);
             button.textContent = 'Erro na exportação';
+            alert('Ocorreu um erro durante a exportação. Por favor, tente novamente.');
+        } finally {
             setTimeout(() => {
                 button.textContent = originalText;
                 button.disabled = false;
@@ -121,7 +137,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Funções auxiliares
+    // Funções auxiliares (mantidas do código original)
     function addReportToTable(report) {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -197,7 +213,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return `${day}/${month}/${year}`;
     }
 
-    // Funções de exportação (convertidas para retornar Promises)
+    // Função de exportação para PDF com suporte a iOS
     function exportToPDF() {
         return new Promise((resolve) => {
             const { jsPDF } = window.jspdf;
@@ -283,11 +299,23 @@ document.addEventListener("DOMContentLoaded", function () {
                 doc.text(`TOTAL SEMANAL: R$ ${weeklyTotal.toFixed(2)}`, 14, startY + 10);
             }
 
-            doc.save(`Relatorio_Passagem_${colaboradorData.nomeCompleto}.pdf`);
+            // Método de download específico para iOS
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                const pdfData = doc.output('datauristring');
+                const link = document.createElement('a');
+                link.href = pdfData;
+                link.download = `Relatorio_Passagem_${colaboradorData.nomeCompleto}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                doc.save(`Relatorio_Passagem_${colaboradorData.nomeCompleto}.pdf`);
+            }
             resolve();
         });
     }
 
+    // Função de exportação para Excel com suporte a iOS
     function exportToExcel() {
         return new Promise((resolve) => {
             const wb = XLSX.utils.book_new();
@@ -360,7 +388,18 @@ document.addEventListener("DOMContentLoaded", function () {
             const wsTotals = XLSX.utils.aoa_to_sheet(totalsData);
             XLSX.utils.book_append_sheet(wb, wsTotals, 'Totais');
 
-            XLSX.writeFile(wb, `Relatorio_Passagem_${colaboradorData.nomeCompleto}.xlsx`);
+            // Método de download específico para iOS
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                const excelData = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+                const link = document.createElement('a');
+                link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + excelData;
+                link.download = `Relatorio_Passagem_${colaboradorData.nomeCompleto}.xlsx`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                XLSX.writeFile(wb, `Relatorio_Passagem_${colaboradorData.nomeCompleto}.xlsx`);
+            }
             resolve();
         });
     }
